@@ -16,7 +16,7 @@ public function up(): void
         $table->string('nom', 30);
         $table->string('prenom', 30);
         $table->string('email', 30)->unique();
-        $table->string('motDePasse', 20);
+        $table->string('motDePasse', 255);
         $table->string('telephone', 30)->nullable();
         $table->string('role', 30);
         $table->timestamp('dateCreation')->useCurrent();

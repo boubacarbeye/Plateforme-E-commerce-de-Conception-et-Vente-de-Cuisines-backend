@@ -38,9 +38,9 @@ return [
     */
 
     'guards' => [
-        'web' => [
-            'driver' => 'session',
-            'provider' => 'users',
+        'api' => [
+            'driver' => 'jwt',          // On dit d'utiliser JWT
+            'provider' => 'users',       // Qui utilise le fournisseur 'users' défini ci-dessous
         ],
     ],
 
@@ -64,13 +64,8 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', User::class),
+            'model' => App\Models\Utilisateur::class, // On pointe vers notre fameux modèle !
         ],
-
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
     ],
 
     /*
