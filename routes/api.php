@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ModuleController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -35,4 +36,17 @@ Route::middleware('auth:api')->group(function () {
         });
     });
     
+});
+
+// --- ROUTES DU CATALOGUE DES MODULES ---
+
+// Routes publiques (Accessibles par les clients pour composer leur cuisine)
+Route::get('/modules', [ModuleController::class, 'index']);
+Route::get('/modules/{id}', [ModuleController::class, 'show']);
+
+// Routes protégées (Seul l'admin connecté peut modifier le catalogue)
+Route::middleware(['auth:api', 'role:admin'])->group(function () {
+    Route::post('/modules', [ModuleController::class, 'store']);       // Créer
+    Route::put('/modules/{id}', [ModuleController::class, 'update']);   // Modifier
+    Route::delete('/modules/{id}', [ModuleController::class, 'destroy']); // Supprimer
 });
