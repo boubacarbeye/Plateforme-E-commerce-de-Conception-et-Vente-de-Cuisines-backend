@@ -8,7 +8,6 @@ use Illuminate\Support\Str;
 class AuthController extends Controller
 {
     public function register(Request $request) {
-        // A. Validation : On vérifie que les données reçues sont conformes
         $request->validate([
             'nom' => 'required|string|max:30',
             'prenom' => 'required|string|max:30',

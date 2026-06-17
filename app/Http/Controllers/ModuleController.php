@@ -55,9 +55,8 @@ class ModuleController extends Controller
         return response()->json($module, Response::HTTP_OK);
     }
 
-    /**
-     * PUT/PATCH /api/modules/{id}
-     * Réservé à l'Admin : Mise à jour avec validation de la catégorie.
+    /*
+    Réservé à l'Admin : Mise à jour avec validation de la catégorie.
      */
     public function update(Request $request, $id)
     {

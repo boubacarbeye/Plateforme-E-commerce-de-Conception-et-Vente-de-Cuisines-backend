@@ -13,10 +13,7 @@ return new class extends Migration
     {
         Schema::create('projet_cuisines', function (Blueprint $table) {
             $table->uuid('ProjetCuisine_id')->primary();
-            
-            // Clé étrangère vers Utilisateur
-            $table->foreignUuid('client_id')->constrained('utilisateurs', 'Utilisateur_id');
-            
+            $table->foreignUuid('client_id')->nullable()->constrained('utilisateurs', 'Utilisateur_id');;
             $table->integer('longueur_cm');
             $table->integer('largeur_cm');
             $table->integer('hauteur_cm');

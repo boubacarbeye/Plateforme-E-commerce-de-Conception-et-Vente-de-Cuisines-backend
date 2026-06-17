@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ModuleController;
+use App\Http\Controllers\ProjetCuisineController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -50,3 +51,10 @@ Route::middleware(['auth:api', 'role:admin'])->group(function () {
     Route::put('/modules/{id}', [ModuleController::class, 'update']);   // Modifier
     Route::delete('/modules/{id}', [ModuleController::class, 'destroy']); // Supprimer
 });
+
+
+// ROUTES PUBLIQUES
+Route::post('/projets', [ProjetCuisineController::class, 'store']);    // Créer un projet (Écran création)
+Route::get('/projets/{id}', [ProjetCuisineController::class, 'show']); // Lire un projet spécifique
+Route::put('/projets/{id}', [ProjetCuisineController::class, 'update']); // Modifier
+Route::delete('/projets/{id}', [ProjetCuisineController::class, 'destroy']); // Supprimer
