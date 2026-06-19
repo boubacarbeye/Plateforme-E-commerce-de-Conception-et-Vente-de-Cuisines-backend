@@ -24,6 +24,7 @@ class ModuleProduit extends Model
     protected $fillable = [
         'ModuleProduit_nom',
         'categorie',
+        'largeur_cm',
         'prix_base',
         'image_url',
         'actif'

@@ -69,6 +69,7 @@ class ModuleController extends Controller
         $validated = $request->validate([
             'ModuleProduit_nom' => 'sometimes|string|max:20',
             'categorie'         => 'sometimes|in:meuble_bas,plan_travail,electromenager,meuble_haut,evier,colonne,robinetterie',
+            'largeur_cm'        => 'required|integer|min:10',
             'prix_base'         => 'sometimes|numeric|min:0',
             'image_url'         => 'nullable|string|max:30',
             'actif'             => 'sometimes|boolean'

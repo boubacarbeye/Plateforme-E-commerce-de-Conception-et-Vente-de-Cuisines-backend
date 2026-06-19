@@ -58,3 +58,19 @@ Route::post('/projets', [ProjetCuisineController::class, 'store']);    // Créer
 Route::get('/projets/{id}', [ProjetCuisineController::class, 'show']); // Lire un projet spécifique
 Route::put('/projets/{id}', [ProjetCuisineController::class, 'update']); // Modifier
 Route::delete('/projets/{id}', [ProjetCuisineController::class, 'destroy']); // Supprimer
+
+Route::post('/projets/{id}/modules', [ProjetCuisineController::class, 'ajouterModule']); // Placer un meuble + Test RG-02
+Route::get('/projets/{id}/modules', [ProjetCuisineController::class, 'chargerCanvas']);   // Charger le plan 2D
+Route::get('/projets/{projetId}/modules', [ProjetCuisineController::class, 'listerModules']);
+Route::delete('/projets/{projetId}/modules/{projetModuleId}', [ProjetCuisineController::class, 'supprimerModule']);
+
+
+Route::prefix('auth')->group(function () {
+    Route::post('/login', [AuthController::class, 'login']);
+});
+
+// Routes pour la gestion des modules (doit correspondre à /api/modules)
+Route::get('/modules', [ModuleController::class, 'index']);
+Route::post('/modules', [ModuleController::class, 'store']);
+Route::put('/modules/{id}', [ModuleController::class, 'update']);
+Route::delete('/modules/{id}', [ModuleController::class, 'destroy']);

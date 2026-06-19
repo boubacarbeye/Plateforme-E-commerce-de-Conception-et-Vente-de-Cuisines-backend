@@ -16,7 +16,6 @@ return new class extends Migration
             $table->foreignUuid('projet_id')->constrained('projet_cuisines', 'ProjetCuisine_id');
             $table->foreignUuid('module_id')->constrained('module_produits', 'ModuleProduit_id');
             $table->foreignUuid('materiau_id')->constrained('materiaux', 'Materiau_id');
-            
             $table->integer('position_x');
             $table->integer('position_y');
         });
