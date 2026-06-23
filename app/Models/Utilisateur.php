@@ -10,16 +10,13 @@ class Utilisateur extends Authenticatable implements JWTSubject
 {
     use Notifiable;
 
- 
     protected $table = 'utilisateurs';
     
     protected $primaryKey = 'Utilisateur_id';
     
-
     public $incrementing = false;
     protected $keyType = 'string';
 
-    
     public $timestamps = false; 
 
     protected $fillable = [
@@ -30,7 +27,6 @@ class Utilisateur extends Authenticatable implements JWTSubject
         'motDePasse',
     ];
 
-
     public $authPasswordName = 'motDePasse';
 
     protected function casts(): array
@@ -39,6 +35,7 @@ class Utilisateur extends Authenticatable implements JWTSubject
             'motDePasse' => 'hashed',
         ];
     }
+
     public function getAuthPassword()
     {
         return $this->motDePasse;

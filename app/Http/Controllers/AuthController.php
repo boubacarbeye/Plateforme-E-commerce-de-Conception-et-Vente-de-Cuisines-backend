@@ -1,71 +1,149 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Models\Utilisateur;
+
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use App\Models\Utilisateur;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
-    public function register(Request $request) {
-        $request->validate([
-            'nom' => 'required|string|max:30',
-            'prenom' => 'required|string|max:30',
-            'email' => 'required|string|email|max:30|unique:utilisateurs',
-            'motDePasse' => 'required|string|min:6',
-            'role' => 'required|string|in:client,commercial,admin',
+    /**
+     * Inscription d'un nouvel utilisateur (POST /api/register)
+     */
+    public function register(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'nom'        => 'required|string|max:255',
+            'prenom'     => 'required|string|max:255',
+            'email'      => 'required|email|unique:utilisateurs,email',
+            'password'   => 'required|string|min:8|confirmed',
+            'telephone'  => 'nullable|string|max:20',
+            'role'       => 'nullable|in:client,commercial,admin',
         ]);
 
-        // B. Création : On insère en base de données via le Modèle
-        $user = Utilisateur::create([
-            'Utilisateur_id' => (string) Str::uuid(),
-            'nom' => $request->nom,
-            'prenom' => $request->prenom,
-            'email' => $request->email,
-            'motDePasse' => $request->motDePasse, // Le modèle va le hacher automatiquement !
-            'role' => $request->role,
-        ]);
-
-        // C. Réponse : On génère un token JWT immédiatement pour le connecter
-        $token = auth('api')->login($user);
-
-        return response()->json(['token' => $token, 'user' => $user], 201);
-    }
-
-
-    public function login(Request $request) {
-        $request->validate([
-            'email' => 'required|string|email',
-            'motDePasse' => 'required|string',
-        ]);
-
-        // JWT attend les clés 'email' et 'password'. On adapte notre 'motDePasse'
-        $credentials = [
-            'email' => $request->email,
-            'password' => $request->motDePasse
-        ];
-
-        // auth('api')->attempt() va appliquer Bcrypt sur le mot de passe reçu 
-        // et le comparer avec la chaîne cryptée en BDD.
-        if (! $token = auth('api')->attempt($credentials)) {
-            return response()->json(['error' => 'Identifiants invalides'], 401);
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Données d\'inscription invalides.',
+                'errors'  => $validator->errors()
+            ], 422);
         }
 
-        // Si c'est bon, on récupère l'utilisateur pour connaître son rôle
+        try {
+            $user = Utilisateur::create([
+                'Utilisateur_id' => (string) Str::uuid(),
+                'nom'            => $request->input('nom'),
+                'prenom'         => $request->input('prenom'),
+                'email'          => $request->input('email'),
+                'motDePasse'     => bcrypt($request->input('password')),
+                'telephone'      => $request->input('telephone'),
+                'role'           => $request->input('role', 'client'),
+            ]);
+
+            $token = auth('api')->login($user);
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Compte créé avec succès.',
+                'user'    => [
+                    'id'     => $user->Utilisateur_id,
+                    'nom'    => $user->nom,
+                    'prenom' => $user->prenom,
+                    'email'  => $user->email,
+                    'role'   => $user->role,
+                ],
+                'token' => $token,
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'        => 'error',
+                'message'       => 'Erreur lors de la création du compte.',
+                'error_details' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Connexion d'un utilisateur existant (POST /api/login)
+     */
+    public function login(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email'    => 'required|email',
+            'password' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Champs requis manquants.',
+                'errors'  => $validator->errors()
+            ], 422);
+        }
+
+        $credentials = [
+            'email'    => $request->input('email'),
+            'password' => $request->input('password'),
+        ];
+
+        if (!$token = auth('api')->attempt($credentials)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Identifiants de connexion invalides.'
+            ], 401);
+        }
+
         $user = auth('api')->user();
 
-        // Logique de redirection selon le rôle transmise au Frontend
-        $redirectTo = match($user->role) {
-            'admin' => '/admin/dashboard',
-            'commercial' => '/commercial/espace',
-            'client' => '/mon-projet-cuisine',
-            default => '/',
-        };
+        return response()->json([
+            'status' => 'success',
+            'user'   => [
+                'id'     => $user->Utilisateur_id,
+                'nom'    => $user->nom,
+                'prenom' => $user->prenom,
+                'email'  => $user->email,
+                'role'   => $user->role,
+            ],
+            'token' => $token,
+            'role'  => $user->role,
+        ], 200);
+    }
+
+    /**
+     * Déconnexion (POST /api/logout)
+     */
+    public function logout()
+    {
+        auth('api')->logout();
 
         return response()->json([
-            'token' => $token,
-            'role' => $user->role,
-            'redirect_to' => $redirectTo
-        ]);
-    }    
+            'status'  => 'success',
+            'message' => 'Déconnecté avec succès.'
+        ], 200);
+    }
+
+    /**
+     * Récupérer l'utilisateur connecté (GET /api/me)
+     */
+    public function me()
+    {
+        $user = auth('api')->user();
+
+        return response()->json([
+            'status' => 'success',
+            'user'   => [
+                'id'        => $user->Utilisateur_id,
+                'nom'       => $user->nom,
+                'prenom'    => $user->prenom,
+                'email'     => $user->email,
+                'telephone' => $user->telephone,
+                'role'      => $user->role,
+            ]
+        ], 200);
+    }
 }

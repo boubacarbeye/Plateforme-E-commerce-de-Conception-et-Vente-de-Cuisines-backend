@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('module_produits', function (Blueprint $table) {
@@ -17,15 +14,13 @@ return new class extends Migration
             $table->string('categorie', 20);
             $table->integer('largeur_cm')->default(60);
             $table->decimal('prix_base', 10, 2);
-            $table->string('image_url', 30)->nullable();
+            $table->string('image_url', 255)->nullable(); // 💎 Corrigé : nullable
+            $table->string('modele_3d_url', 255)->nullable(); // 💎 Corrigé : nullable
             $table->boolean('actif')->default(true);
             $table->timestamps(); 
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('module_produits');
