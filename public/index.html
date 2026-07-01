@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CuisineStudio — Configurateur de Cuisine 3D</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script>
+tailwind.config={theme:{extend:{fontFamily:{sans:['DM Sans','sans-serif']},colors:{dark:{900:'#1C1C1F',800:'#222225',700:'#2A2A2E',600:'#333338'},amber:{600:'#D97706',500:'#F59E0B',400:'#FBBF24'}}}}}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#1C1C1F;overflow:hidden}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:#222225}::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+.toast-enter{animation:tI .3s ease-out forwards}.toast-exit{animation:tO .25s ease-in forwards}
+@keyframes tI{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes tO{from{transform:translateX(0);opacity:1}to{transform:translateX(120%);opacity:0}}
+.module-label{position:absolute;pointer-events:none;transform:translate(-50%,-100%);background:rgba(28,28,31,.93);border:1px solid #D97706;border-radius:8px;padding:4px 10px;font-size:11px;color:#FBBF24;white-space:nowrap;backdrop-filter:blur(6px);line-height:1.4;text-align:center}
+.catalog-card{transition:transform .15s,box-shadow .15s,border-color .15s;cursor:pointer;user-select:none}
+.catalog-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(217,119,6,.15);border-color:#D97706!important}
+.catalog-card:active{transform:scale(.97)}
+.drop-active{outline:2px dashed #D97706;outline-offset:-4px}
+.input-field{background:#2A2A2E;border:1px solid #444;color:#fff;border-radius:10px;padding:10px 14px;font-size:14px;width:100%;outline:none;transition:border-color .2s}
+.input-field:focus{border-color:#D97706}.input-field::placeholder{color:#777}
+.btn-primary{background:#D97706;color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s,transform .1s}
+.btn-primary:hover{background:#B45309}.btn-primary:active{transform:scale(.97)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp .4s ease-out forwards}
+.zoom-btn{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;border:1px solid #444;background:rgba(28,28,31,.9);color:#ccc;font-size:14px;backdrop-filter:blur(8px)}
+.zoom-btn:hover{background:#D97706;color:#fff;border-color:#D97706}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:25}
+@media(max-width:1023px){.sidebar-open .sidebar-overlay{display:block}}
+.api-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.api-on{background:#22c55e;box-shadow:0 0 6px #22c55e}.api-off{background:#ef4444;box-shadow:0 0 6px #ef4444}
+.template-card{background:#222225;border:1px solid #333;border-radius:10px;padding:10px 12px;cursor:pointer;transition:all .15s}
+.template-card:hover{border-color:#D97706;background:#2A2A2E;transform:translateY(-1px)}
+.edit-hl{box-shadow:0 0 0 2px #D97706 !important}
+.role-select{background:#2A2A2E;border:1px solid #444;color:#ccc;border-radius:6px;padding:3px 8px;font-size:11px;outline:none;cursor:pointer}
+.role-select:focus{border-color:#D97706}
+</style>
+</head>
+<body>
+
+<div id="toasts" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
+<!-- CONNEXION -->
+<div id="view-login" class="hidden min-h-screen flex items-center justify-center p-4" style="background:#1C1C1F">
+  <div class="w-full max-w-md fade-up">
+    <div class="text-center mb-8"><h1 class="text-4xl font-black text-white mb-1">Cuisine<span style="color:#D97706">Studio</span></h1><p class="text-gray-500 text-sm">Concevez votre cuisine de reve</p></div>
+    <div class="p-8 rounded-2xl" style="background:#2A2A2E;border:1px solid #333">
+      <div class="flex items-center gap-2 mb-4 text-xs"><span class="api-dot api-off" id="login-dot"></span><span class="text-gray-500" id="login-txt">Verification API...</span></div>
+      <h2 class="text-xl font-bold text-white mb-1">Connexion</h2>
+      <p class="text-gray-400 text-sm mb-6">Accedez a vos projets</p>
+      <form id="form-login" class="flex flex-col gap-4">
+        <input type="email" placeholder="Email" required class="input-field" id="login-email">
+        <input type="password" placeholder="Mot de passe" required class="input-field" id="login-pass">
+        <button type="submit" class="btn-primary w-full mt-2">Se connecter</button>
+      </form>
+      <p class="text-gray-500 text-center text-sm mt-5">Pas de compte ? <a href="#" onclick="showView('register')" class="font-semibold" style="color:#F59E0B">S'inscrire</a></p>
+      <p class="text-center mt-3"><a href="#" onclick="showView('app')" class="text-gray-600 text-xs hover:text-gray-400">Continuer sans compte</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- INSCRIPTION -->
+<div id="view-register" class="hidden min-h-screen flex items-center justify-center p-4" style="background:#1C1C1F">
+  <div class="w-full max-w-md fade-up">
+    <div class="text-center mb-8"><h1 class="text-4xl font-black text-white mb-1">Cuisine<span style="color:#D97706">Studio</span></h1></div>
+    <div class="p-8 rounded-2xl" style="background:#2A2A2E;border:1px solid #333">
+      <div class="flex items-center gap-2 mb-4 text-xs"><span class="api-dot api-off" id="reg-dot"></span><span class="text-gray-500" id="reg-txt">Verification API...</span></div>
+      <h2 class="text-xl font-bold text-white mb-1">Inscription</h2>
+      <form id="form-register" class="flex flex-col gap-3 mt-4">
+        <div class="grid grid-cols-2 gap-3"><input type="text" placeholder="Prenom" required class="input-field"><input type="text" placeholder="Nom" required class="input-field"></div>
+        <input type="email" placeholder="Email" required class="input-field">
+        <input type="password" placeholder="Mot de passe" required class="input-field" minlength="6">
+        <input type="password" placeholder="Confirmer" required class="input-field" minlength="6">
+        <button type="submit" class="btn-primary w-full mt-2">Creer mon compte</button>
+      </form>
+      <p class="text-gray-500 text-center text-sm mt-5">Deja inscrit ? <a href="#" onclick="showView('login')" class="font-semibold" style="color:#F59E0B">Se connecter</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="view-app" class="hidden h-screen flex flex-col">
+  <header class="h-[60px] flex items-center px-4 flex-shrink-0 z-20" style="background:#1C1C1F;border-bottom:1px solid #2A2A2E">
+    <div class="flex items-center gap-3">
+      <button id="btn-sb-tog" class="lg:hidden text-gray-400 hover:text-white w-9 h-9 flex items-center justify-center rounded-lg hover:bg-dark-700 transition"><i class="fas fa-bars text-lg"></i></button>
+      <span class="text-lg font-black text-white tracking-tight">Cuisine<span style="color:#D97706">Studio</span></span>
+    </div>
+    <div class="flex-1 flex justify-center px-4">
+      <div class="flex rounded-lg p-0.5" style="background:#2A2A2E">
+        <button id="btn-lin" class="px-4 py-1.5 rounded-md text-xs font-semibold transition-all" style="background:#D97706;color:#fff">Lineaire</button>
+        <button id="btn-el" class="px-4 py-1.5 rounded-md text-xs font-semibold text-gray-400 transition-all hover:text-white">En L</button>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg" style="background:#2A2A2E"><i class="fas fa-coins text-xs" style="color:#D97706"></i><span id="total-price" class="text-white font-bold text-sm">0 FCFA</span></div>
+      <button id="btn-clear" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-dark-700 transition" title="Tout supprimer"><i class="fas fa-trash-can text-sm"></i></button>
+      <button id="btn-save" class="hidden btn-primary text-xs py-1.5 px-3"><i class="fas fa-save mr-1"></i>Sauver</button>
+      <button id="btn-proj" class="hidden w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-white hover:bg-dark-700 transition" title="Projets"><i class="fas fa-folder-open text-sm"></i></button>
+      <div id="user-menu" class="hidden relative">
+        <button id="btn-user" class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs" style="background:#D97706">U</button>
+        <div id="user-dd" class="hidden absolute right-0 top-10 rounded-xl shadow-2xl py-2 w-48 z-50" style="background:#2A2A2E;border:1px solid #444">
+          <a href="#" id="btn-adm-lnk" class="hidden px-4 py-2.5 text-gray-300 hover:bg-dark-600 text-sm flex items-center gap-2"><i class="fas fa-shield-halved w-4 text-center" style="color:#D97706"></i>Administration</a>
+          <a href="#" id="btn-logout" class="px-4 py-2.5 text-gray-300 hover:bg-dark-600 text-sm flex items-center gap-2"><i class="fas fa-right-from-bracket w-4 text-center"></i>Deconnexion</a>
+        </div>
+      </div>
+      <button id="btn-login-hdr" class="btn-primary text-xs py-1.5 px-3"><i class="fas fa-user mr-1"></i>Connexion</button>
+    </div>
+  </header>
+  <div id="app-body" class="flex-1 flex overflow-hidden relative">
+    <div class="sidebar-overlay" id="sb-overlay"></div>
+    <aside id="sidebar" class="w-[280px] flex-shrink-0 overflow-y-auto border-r transition-transform duration-300 lg:translate-x-0 -translate-x-full absolute lg:relative h-full z-30" style="background:#222225;border-color:#333">
+      <div class="p-4">
+        <h2 class="text-white font-bold text-base mb-3 flex items-center gap-2"><i class="fas fa-grid-2 text-sm" style="color:#D97706"></i>Catalogue</h2>
+        <div class="mb-4 p-3 rounded-xl" style="background:#2A2A2E">
+          <button id="btn-tpl-tog" class="flex items-center justify-between w-full text-white font-semibold text-sm"><span><i class="fas fa-wand-magic-sparkles mr-2" style="color:#D97706"></i>Modeles prets</span><i class="fas fa-chevron-down text-xs text-gray-500 transition-transform" id="tpl-chev"></i></button>
+          <div id="tpl-list" class="hidden mt-3 flex flex-col gap-2"></div>
+        </div>
+        <div class="mb-4 p-3 rounded-xl" style="background:#2A2A2E">
+          <div class="flex justify-between text-xs mb-1.5"><span class="text-gray-400">Longueur utilisee</span><span id="w-disp" class="text-gray-300 font-medium">0 / 400 cm</span></div>
+          <div class="h-2 rounded-full overflow-hidden" style="background:#1C1C1F"><div id="w-bar" class="h-full rounded-full transition-all duration-300" style="width:0%;background:linear-gradient(90deg,#D97706,#F59E0B)"></div></div>
+          <div id="w-warn" class="hidden text-xs mt-1.5 text-red-400"><i class="fas fa-triangle-exclamation mr-1"></i>Limite atteinte</div>
+        </div>
+        <div id="cat-fil" class="flex flex-wrap gap-1.5 mb-3"></div>
+        <div id="cat-list" class="flex flex-col gap-2"></div>
+      </div>
+    </aside>
+    <main id="viewport" class="flex-1 relative" style="background:#1a1a1d">
+      <div id="three-ct" class="w-full h-full"></div>
+      <div id="lbl-ct" class="absolute inset-0 pointer-events-none overflow-hidden z-10"></div>
+      <div class="absolute bottom-4 right-4 flex flex-col gap-2 z-20">
+        <button class="zoom-btn" id="btn-zi"><i class="fas fa-plus"></i></button>
+        <button class="zoom-btn" id="btn-zo"><i class="fas fa-minus"></i></button>
+        <button class="zoom-btn" id="btn-zr"><i class="fas fa-expand"></i></button>
+      </div>
+      <div class="absolute top-3 right-3 text-[10px] text-gray-600 z-10 text-right leading-relaxed hidden sm:block">
+        <i class="fas fa-mouse mr-1"></i>Molette : zoom<br><i class="fas fa-arrows-rotate mr-1"></i>Clic gauche : tourner<br><i class="fas fa-up-down-left-right mr-1"></i>Clic droit : deplacer<br><span style="color:#D97706"><i class="fas fa-hand-pointer mr-1"></i>Glisser un module pour le deplacer</span>
+      </div>
+      <div class="sm:hidden absolute top-3 left-3 px-3 py-1.5 rounded-lg text-xs font-bold text-white z-10" style="background:rgba(28,28,31,.85);border:1px solid #333"><i class="fas fa-coins mr-1" style="color:#D97706"></i><span id="tp-mob">0 FCFA</span></div>
+      <div id="pos-ind" class="hidden absolute bottom-16 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-lg z-20 text-xs font-mono" style="background:rgba(217,119,6,.9);color:#fff;backdrop-filter:blur(8px)"></div>
+      <div id="mod-tb" class="hidden absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 rounded-xl px-4 py-2.5 z-20" style="background:rgba(28,28,31,.92);border:1px solid #444;backdrop-filter:blur(12px)">
+        <span id="tb-name" class="text-white text-sm font-medium flex items-center gap-2 mr-2"></span>
+        <button id="btn-del-mod" class="px-3 py-1.5 rounded-lg text-xs font-medium text-red-400 hover:bg-red-900/30 transition flex items-center gap-1"><i class="fas fa-trash"></i>Supprimer</button>
+      </div>
+      <div id="drop-ind" class="hidden absolute inset-0 flex items-center justify-center z-30 pointer-events-none"><div class="px-6 py-3 rounded-xl text-white font-semibold text-sm" style="background:rgba(217,119,6,.9)"><i class="fas fa-plus-circle mr-2"></i>Deposez le module ici</div></div>
+      <div id="proj-modal" class="hidden absolute inset-0 flex items-center justify-center z-40" style="background:rgba(0,0,0,.6);backdrop-filter:blur(4px)">
+        <div class="rounded-2xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto mx-4 fade-up" style="background:#2A2A2E;border:1px solid #444">
+          <div class="flex justify-between items-center mb-4"><h3 class="text-white font-bold text-lg">Mes Projets</h3><button id="btn-cls-proj" class="text-gray-400 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-dark-600"><i class="fas fa-times"></i></button></div>
+          <div id="proj-list"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="view-admin" class="hidden h-screen flex">
+  <aside class="w-56 flex-shrink-0 flex flex-col" style="background:#0F172A">
+    <div class="p-4 border-b" style="border-color:#1E293B"><span class="text-base font-black text-white">Cuisine<span style="color:#D97706">Studio</span></span><p class="text-xs text-gray-500 mt-0.5">Administration</p></div>
+    <nav class="mt-2 flex-1">
+      <a href="#" data-at="cat" class="anav flex items-center gap-2.5 px-4 py-3 text-sm text-white transition" style="background:#1E293B"><i class="fas fa-boxes-stacked w-4 text-center" style="color:#D97706"></i>Catalogue</a>
+      <a href="#" data-at="usr" class="anav flex items-center gap-2.5 px-4 py-3 text-sm text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fas fa-users w-4 text-center"></i>Utilisateurs</a>
+      <a href="#" onclick="showView('app');return false" class="flex items-center gap-2.5 px-4 py-3 text-sm text-gray-400 hover:text-white hover:bg-white/5 transition mt-auto"><i class="fas fa-arrow-left w-4 text-center"></i>Retour</a>
+    </nav>
+  </aside>
+  <main class="flex-1 overflow-y-auto p-6" style="background:#1E1E22">
+    <div id="a-cat">
+      <h2 class="text-white text-2xl font-bold mb-5">Gestion du Catalogue</h2>
+      <div id="a-form-w" class="rounded-xl p-5 mb-6" style="background:#2A2A2E;border:1px solid #333">
+        <div class="flex justify-between items-center mb-3"><h3 class="text-white font-semibold text-sm" id="a-form-t">Ajouter un module</h3><button id="a-cancel" class="hidden text-xs text-gray-400 hover:text-white transition"><i class="fas fa-times mr-1"></i>Annuler</button></div>
+        <div class="grid grid-cols-2 gap-3">
+          <input id="a-nom" placeholder="Nom" class="input-field text-sm"><select id="a-cat-s" class="input-field text-sm"><option value="meuble_bas">Meuble bas</option><option value="meuble_haut">Meuble haut</option><option value="evier">Evier</option><option value="electromenager">Electromenager</option><option value="colonne">Colonne</option><option value="hotte">Hotte</option></select>
+          <input id="a-larg" type="number" placeholder="Largeur (cm)" class="input-field text-sm"><input id="a-prix" type="number" placeholder="Prix (FCFA)" class="input-field text-sm">
+          <input id="a-img" placeholder="URL image" class="input-field text-sm col-span-2"><input id="a-glb" placeholder="URL GLB" class="input-field text-sm col-span-2">
+        </div>
+        <div class="flex gap-2 mt-3"><button id="a-add" class="btn-primary text-sm">Ajouter</button><button id="a-upd" class="hidden btn-primary text-sm" style="background:#2D8B75">Enregistrer</button></div>
+      </div>
+      <div class="rounded-xl overflow-hidden" style="background:#2A2A2E;border:1px solid #333"><table class="w-full text-sm"><thead><tr style="background:#333338"><th class="text-left text-gray-300 px-4 py-3 font-medium">Nom</th><th class="text-left text-gray-300 px-4 py-3 font-medium">Categorie</th><th class="text-left text-gray-300 px-4 py-3 font-medium">Largeur</th><th class="text-left text-gray-300 px-4 py-3 font-medium">Prix</th><th class="text-left text-gray-300 px-4 py-3 font-medium w-28">Actions</th></tr></thead><tbody id="a-tbody"></tbody></table></div>
+    </div>
+    <div id="a-usr" class="hidden">
+      <h2 class="text-white text-2xl font-bold mb-5">Utilisateurs</h2>
+      <div class="rounded-xl overflow-hidden" style="background:#2A2A2E;border:1px solid #333"><table class="w-full text-sm"><thead><tr style="background:#333338"><th class="text-left text-gray-300 px-4 py-3 font-medium">Nom</th><th class="text-left text-gray-300 px-4 py-3 font-medium">Email</th><th class="text-left text-gray-300 px-4 py-3 font-medium">Role</th><th class="text-left text-gray-300 px-4 py-3 font-medium w-44">Actions</th></tr></thead><tbody id="a-ubody"></tbody></table></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const API='http://127.0.0.1:8000/api';
+const HB=90,HH=68,HC=215,PR=60,ECART=48,PH=32,MAXW=400,CX=280,SX=20;
+const CL={meuble_bas:'Meuble bas',meuble_haut:'Meuble haut',evier:'Evier',electromenager:'Electromenager',colonne:'Colonne',hotte:'Hotte'};
+const CI={meuble_bas:'fa-cube',meuble_haut:'fa-box-open',evier:'fa-sink',electromenager:'fa-plug',colonne:'fa-arrows-up-down',hotte:'fa-wind'};
+const CC={meuble_bas:'#2D8B75',meuble_haut:'#3B7DD8',evier:'#7A8898',electromenager:'#C4622D',colonne:'#2D6A4F',hotte:'#6B7B8D'};
+function fmtP(p){return Math.round(Number(p)||0).toLocaleString('fr-FR')+' FCFA'}
+
+const S={user:JSON.parse(localStorage.getItem('cs_user'))||null,token:localStorage.getItem('cs_token')||null,modules:[],placed:[],layout:'lineaire',sel:-1,sbO:false,catF:'all',projects:[],apiOn:false,editId:null,users:[]};
+const FB_IDS=new Set([1,2,3,4,5,6,7,8,9,10,11,12,13,14]);
+const FB=[
+  {ModuleProduit_id:1,ModuleProduit_nom:"Meuble bas 40",categorie:"meuble_bas",largeur_cm:40,prix_base:65000,image_url:"",modele_3d_url:null},
+  {ModuleProduit_id:2,ModuleProduit_nom:"Meuble bas 60",categorie:"meuble_bas",largeur_cm:60,prix_base:85000,image_url:"",modele_3d_url:null},
+  {ModuleProduit_id:3,ModuleProduit_nom:"Meuble bas 80",categorie:"meuble_bas",largeur_cm:80,prix_base:105000,image_url:"",modele_3d_url:null},
+  {ModuleProduit_id:4,ModuleProduit_nom:"Meuble bas 100",categorie:"meuble_bas",largeur_cm:100,prix_base:125000,image_url:"",modele_3d_url:null},
+  {ModuleProduit_id:5,ModuleProduit_nom:"Evier 1 bac 60",categorie:"evier",largeur_cm:60,prix_base:145000,image_url:"",modele_3d_url:null},
+  {ModuleProduit_id:6,ModuleProduit_nom:"Evier 2 bacs 80",categorie:"evier",largeur_cm:80,prix_base:175000,image_url:"",modele_3d_url:null},
+  {ModuleProduit_id:7,ModuleProduit_nom:"Four encastrable 60",categorie:"electromenager",largeur_cm:60,prix_base:250000,image_url:"",modele_3d_url:null},
+  {ModuleProduit_id:8,ModuleProduit_nom:"Plaque de cuisson 60",categorie:"electromenager",largeur_cm:60,prix_base:180000,image_url:"",modele_3d_url:null},
+  {ModuleProduit_id:9,ModuleProduit_nom:"Plaque de cuisson 80",categorie:"electromenager",largeur_cm:80,prix_base:210000,image_url:"",modele_3d_url:null},
+  {ModuleProduit_id:10,ModuleProduit_nom:"Refrigerateur 60",categorie:"colonne",largeur_cm:60,prix_base:450000,image_url:"",modele_3d_url:null},
+  {ModuleProduit_id:11,ModuleProduit_nom:"Colonne four 60",categorie:"colonne",largeur_cm:60,prix_base:320000,image_url:"",modele_3d_url:null},
+  {ModuleProduit_id:12,ModuleProduit_nom:"Hotte decorative 60",categorie:"hotte",largeur_cm:60,prix_base:120000,image_url:"",modele_3d_url:null},
+  {ModuleProduit_id:13,ModuleProduit_nom:"Meuble haut 60",categorie:"meuble_haut",largeur_cm:60,prix_base:55000,image_url:"",modele_3d_url:null},
+  {ModuleProduit_id:14,ModuleProduit_nom:"Meuble haut 80",categorie:"meuble_haut",largeur_cm:80,prix_base:65000,image_url:"",modele_3d_url:null},
+];
+const TPL=[
+  {name:"Studio compact",icon:"fa-house",desc:"200 cm",layout:"lineaire",items:[{c:"meuble_bas",w:60},{c:"evier",w:60},{c:"electromenager",w:60},{c:"colonne",w:60}]},
+  {name:"Classique lineaire",icon:"fa-grip-lines",desc:"360 cm",layout:"lineaire",items:[{c:"colonne",w:60},{c:"meuble_bas",w:60},{c:"evier",w:60},{c:"electromenager",w:60},{c:"meuble_bas",w:60},{c:"meuble_bas",w:60}]},
+  {name:"Moderne en L",icon:"fa-turn-up",desc:"420 cm",layout:"en_l",items:[{c:"colonne",w:60},{c:"meuble_bas",w:60},{c:"evier",w:60},{c:"electromenager",w:60},{c:"meuble_bas",w:60},{c:"meuble_bas",w:60},{c:"meuble_bas",w:80}]},
+  {name:"Grande famille",icon:"fa-people-roof",desc:"400 cm",layout:"lineaire",items:[{c:"colonne",w:60},{c:"meuble_bas",w:60},{c:"evier",w:80},{c:"electromenager",w:60},{c:"meuble_bas",w:80},{c:"meuble_bas",w:60}]},
+];
+
+async function checkApi(){try{const r=await fetch(`${API}/modules`,{signal:AbortSignal.timeout(3000)});S.apiOn=r.ok}catch{S.apiOn=false}document.querySelectorAll('.api-dot').forEach(d=>{d.classList.toggle('api-on',S.apiOn);d.classList.toggle('api-off',!S.apiOn)});document.querySelectorAll('#login-txt,#reg-txt').forEach(t=>{t.textContent=S.apiOn?'API connectee':'API non detectee'})}
+async function apiFetch(ep,opts={}){const h={'Content-Type':'application/json','Accept':'application/json',...opts.headers};if(S.token)h['Authorization']=`Bearer ${S.token}`;const r=await fetch(`${API}${ep}`,{...opts,headers:h});const d=await r.json();if(!r.ok)throw new Error(d.message||`Erreur ${r.status}`);return d}
+function toast(msg,type='info'){const el=document.createElement('div');const c={success:'border-green-500 bg-green-900/80',error:'border-red-500 bg-red-900/80',info:'border-amber-500 bg-amber-900/80'};const ic={success:'fa-check-circle text-green-400',error:'fa-circle-exclamation text-red-400',info:'fa-circle-info text-amber-400'};el.className=`toast-enter pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border text-sm text-white ${c[type]||c.info}`;el.style.backdropFilter='blur(8px)';el.innerHTML=`<i class="fas ${ic[type]||ic.info}"></i><span>${msg}</span>`;document.getElementById('toasts').appendChild(el);setTimeout(()=>{el.classList.replace('toast-enter','toast-exit');setTimeout(()=>el.remove(),300)},3500)}
+window.showView=function(v){['login','register','app','admin'].forEach(id=>document.getElementById('view-'+id).classList.add('hidden'));document.getElementById('view-'+v).classList.remove('hidden');if(v==='app'){requestAnimationFrame(resizeR);if(!sI)initScene()}if(v==='admin'){renderAdm();loadAdmUsr()}};
+function findMod(cat,w){return S.modules.find(m=>m.categorie===cat&&m.largeur_cm===w)||S.modules.find(m=>m.categorie===cat)}
+
+function renderTpl(){document.getElementById('tpl-list').innerHTML=TPL.map((t,i)=>`<div class="template-card" data-t="${i}"><div class="flex items-center gap-2 mb-1"><i class="fas ${t.icon} text-xs" style="color:#D97706"></i><span class="text-white text-xs font-semibold">${t.name}</span></div><p class="text-gray-500 text-[10px]">${t.desc}</p></div>`).join('');document.getElementById('tpl-list').querySelectorAll('.template-card').forEach(c=>{c.addEventListener('click',()=>loadTpl(TPL[parseInt(c.dataset.t)]))})}
+async function loadTpl(t){clearScene();S.layout=t.layout;document.getElementById('btn-lin').style.background=t.layout==='lineaire'?'#D97706':'transparent';document.getElementById('btn-lin').style.color=t.layout==='lineaire'?'#fff':'#9CA3AF';document.getElementById('btn-el').style.background=t.layout==='en_l'?'#D97706':'transparent';document.getElementById('btn-el').style.color=t.layout==='en_l'?'#fff':'#9CA3AF';for(const it of t.items){const m=findMod(it.c,it.w);if(m)await addMod(m)}toast(`"${t.name}" charge`,'success')}
+document.getElementById('btn-tpl-tog').addEventListener('click',()=>{const l=document.getElementById('tpl-list'),ch=document.getElementById('tpl-chev');l.classList.toggle('hidden');ch.style.transform=l.classList.contains('hidden')?'':'rotate(180deg)'});
+
+function renderCat(){const list=document.getElementById('cat-list');const f=S.catF==='all'?S.modules:S.modules.filter(m=>m.categorie===S.catF);list.innerHTML=f.map(m=>`<div class="catalog-card rounded-xl p-3 border" style="background:#2A2A2E;border-color:#333" data-id="${m.ModuleProduit_id}"><div class="flex gap-3"><div class="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0" style="background:${CC[m.categorie]}22"><i class="fas ${CI[m.categorie]}" style="color:${CC[m.categorie]}"></i></div><div class="flex-1 min-w-0"><p class="text-white text-xs font-semibold truncate">${m.ModuleProduit_nom}</p><p class="text-gray-500 text-[10px] mt-0.5">${m.largeur_cm} cm · ${CL[m.categorie]}</p><p class="text-xs font-bold mt-1" style="color:#F59E0B">${fmtP(m.prix_base)}</p></div><div class="flex items-center"><i class="fas fa-plus-circle text-gray-600 hover:text-amber-500 transition text-lg"></i></div></div></div>`).join('');const fil=document.getElementById('cat-fil');const cats=['all',...new Set(S.modules.map(m=>m.categorie))];fil.innerHTML=cats.map(c=>{const a=S.catF===c;return`<button class="px-2.5 py-1 rounded-md text-[10px] font-semibold transition ${a?'text-white':'text-gray-500 hover:text-gray-300'}" style="${a?'background:#D97706':'background:#2A2A2E'}" data-c="${c}">${c==='all'?'Tous':CL[c]||c}</button>`}).join('');fil.querySelectorAll('button').forEach(b=>{b.onclick=()=>{S.catF=b.dataset.c;renderCat()}});list.querySelectorAll('.catalog-card').forEach(card=>{card.addEventListener('click',()=>{const cid=String(card.dataset.id);const m=S.modules.find(x=>String(x.ModuleProduit_id)===cid);if(m)addMod(m)})})}
+
+function updateUI(){const fl=S.placed.filter(p=>['meuble_bas','evier','electromenager','colonne'].includes(p.data.categorie));const tw=fl.reduce((s,p)=>s+(p.data.largeur_cm||0),0),tp=S.placed.reduce((s,p)=>s+(p.data.prix_base||0),0);const pct=Math.min(100,(tw/MAXW)*100);document.getElementById('w-disp').textContent=`${tw} / ${MAXW} cm`;document.getElementById('w-bar').style.width=pct+'%';document.getElementById('w-bar').style.background=pct>=100?'#EF4444':'linear-gradient(90deg,#D97706,#F59E0B)';document.getElementById('w-warn').classList.toggle('hidden',pct<100);const ps=fmtP(tp);document.getElementById('total-price').textContent=ps;const mob=document.getElementById('tp-mob');if(mob)mob.textContent=ps}
+
+// ============ AUTH ============
+function updateAuth(){const l=!!S.token;document.getElementById('btn-login-hdr').classList.toggle('hidden',l);document.getElementById('btn-save').classList.toggle('hidden',!l);document.getElementById('btn-proj').classList.toggle('hidden',!l);document.getElementById('user-menu').classList.toggle('hidden',!l);if(S.user){const i=((S.user.prenom||'')[0]||'')+((S.user.nom||'')[0]||'');document.getElementById('btn-user').textContent=(i||'U').toUpperCase();document.getElementById('btn-adm-lnk').classList.toggle('hidden',S.user.role!=='admin')}}
+document.getElementById('form-login').addEventListener('submit',async e=>{e.preventDefault();if(!S.apiOn){toast('API indisponible','error');return}try{const d=await apiFetch('/login',{method:'POST',body:JSON.stringify({email:document.getElementById('login-email').value,password:document.getElementById('login-pass').value})});if(d&&d.token){S.token=d.token;S.user=d.user||{};localStorage.setItem('cs_token',d.token);localStorage.setItem('cs_user',JSON.stringify(S.user));updateAuth();showView('app');toast('Connexion reussie','success')}else toast('Identifiants incorrects','error')}catch(er){toast(er.message,'error')}});
+document.getElementById('form-register').addEventListener('submit',async e=>{e.preventDefault();if(!S.apiOn){toast('API indisponible','error');return}const inp=e.target.querySelectorAll('input');if(inp[3].value!==inp[4].value){toast('Mots de passe differents','error');return}try{const d=await apiFetch('/register',{method:'POST',body:JSON.stringify({prenom:inp[0].value,nom:inp[1].value,email:inp[2].value,password:inp[3].value,password_confirmation:inp[4].value})});if(d&&d.token){S.token=d.token;S.user=d.user||{};localStorage.setItem('cs_token',d.token);localStorage.setItem('cs_user',JSON.stringify(S.user));updateAuth();showView('app');toast('Compte cree','success')}else toast(d?.message||'Erreur','error')}catch(er){toast(er.message,'error')}});
+document.getElementById('btn-logout').addEventListener('click',e=>{e.preventDefault();document.getElementById('user-dd').classList.add('hidden');S.token=null;S.user=null;localStorage.removeItem('cs_token');localStorage.removeItem('cs_user');updateAuth();toast('Deconnecte','info')});
+document.getElementById('btn-user').addEventListener('click',e=>{e.stopPropagation();document.getElementById('user-dd').classList.toggle('hidden')});
+document.addEventListener('click',()=>document.getElementById('user-dd').classList.add('hidden'));
+
+// ============ PROJETS ============
+document.getElementById('btn-proj').addEventListener('click',async()=>{document.getElementById('proj-modal').classList.remove('hidden');try{const d=await apiFetch('/projets');S.projects=Array.isArray(d)?d:(d?.data||[])}catch{S.projects=[]}renderProj()});
+document.getElementById('btn-cls-proj').addEventListener('click',()=>document.getElementById('proj-modal').classList.add('hidden'));
+function renderProj(){const el=document.getElementById('proj-list');if(!S.projects.length){el.innerHTML='<p class="text-gray-500 text-sm text-center py-8">Aucun projet</p>';return}el.innerHTML=S.projects.map(p=>`<div class="flex items-center justify-between p-3 rounded-lg mb-2" style="background:#222225"><div><p class="text-white text-sm font-medium">${p.nom||'Sans nom'}</p></div><div class="flex gap-1.5"><button onclick="loadProj(${p.id})" class="w-8 h-8 rounded-lg flex items-center justify-center text-amber-400 hover:bg-amber-900/30"><i class="fas fa-download text-xs"></i></button><button onclick="delProj(${p.id})" class="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-900/30"><i class="fas fa-trash text-xs"></i></button></div></div>`).join('')}
+document.getElementById('btn-save').addEventListener('click',async()=>{try{await apiFetch('/projets',{method:'POST',body:JSON.stringify({nom:`Cuisine ${new Date().toLocaleDateString('fr-FR')}`,modules:S.placed.map(p=>({ModuleProduit_id:p.data.ModuleProduit_id,position:p.position}))})});toast('Projet sauvegarde','success')}catch(e){toast(e.message,'error')}});
+window.loadProj=async function(id){try{const d=await apiFetch(`/projets/${id}`);if(d?.modules){clearScene();for(const m of d.modules){const mod=S.modules.find(x=>String(x.ModuleProduit_id)===String(m.ModuleProduit_id));if(mod){await addMod(mod);if(m.position){const pm=S.placed[S.placed.length-1];if(pm&&pm.mesh){pm.position={...pm.position,...m.position};pm.mesh.position.set(pm.position.x,0,pm.position.z);pm.mesh.rotation.y=pm.position.rot||0}}}}}document.getElementById('proj-modal').classList.add('hidden');toast('Projet charge','success')}catch(e){toast('Erreur','error')}};
+window.delProj=async function(id){try{await apiFetch(`/projets/${id}`,{method:'DELETE'});S.projects=S.projects.filter(p=>p.id!==id);renderProj();toast('Supprime','success')}catch(e){toast(e.message,'error')}};
+
+// ============ ADMIN ============
+document.getElementById('btn-adm-lnk').addEventListener('click',e=>{e.preventDefault();document.getElementById('user-dd').classList.add('hidden');showView('admin')});
+document.querySelectorAll('.anav').forEach(a=>{a.addEventListener('click',e=>{e.preventDefault();document.querySelectorAll('.anav').forEach(n=>{n.style.background='transparent';n.classList.remove('text-white');n.classList.add('text-gray-400')});a.style.background='#1E293B';a.classList.add('text-white');a.classList.remove('text-gray-400');document.getElementById('a-cat').classList.toggle('hidden',a.dataset.at!=='cat');document.getElementById('a-usr').classList.toggle('hidden',a.dataset.at!=='usr')})});
+function isLocal(id){return FB_IDS.has(Number(id))}
+function renderAdm(){document.getElementById('a-tbody').innerHTML=S.modules.map(m=>{const l=isLocal(m.ModuleProduit_id);return`<tr class="border-t" style="border-color:#333" id="ar-${m.ModuleProduit_id}"><td class="px-4 py-3 text-white">${m.ModuleProduit_nom}</td><td class="px-4 py-3 text-gray-400">${CL[m.categorie]||m.categorie}</td><td class="px-4 py-3 text-gray-400">${m.largeur_cm} cm</td><td class="px-4 py-3 text-gray-300 font-medium">${fmtP(m.prix_base)}</td><td class="px-4 py-3"><div class="flex gap-2"><button onclick="editMod(${m.ModuleProduit_id})" class="text-amber-400 hover:text-amber-300 text-xs"><i class="fas fa-pen"></i></button>${l?'<span class="text-gray-700 text-xs"><i class="fas fa-lock text-[10px]"></i></span>':`<button onclick="delAdmMod(${m.ModuleProduit_id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fas fa-trash"></i></button>`}</div></td></tr>`}).join('')}
+window.editMod=function(id){const m=S.modules.find(x=>String(x.ModuleProduit_id)===String(id));if(!m)return;S.editId=id;document.getElementById('a-nom').value=m.ModuleProduit_nom;document.getElementById('a-cat-s').value=m.categorie;document.getElementById('a-larg').value=m.largeur_cm;document.getElementById('a-prix').value=m.prix_base;document.getElementById('a-img').value=m.image_url||'';document.getElementById('a-glb').value=m.modele_3d_url||'';document.getElementById('a-form-t').textContent='Modifier le module';document.getElementById('a-add').classList.add('hidden');document.getElementById('a-upd').classList.remove('hidden');document.getElementById('a-cancel').classList.remove('hidden');document.getElementById('a-form-w').classList.add('edit-hl');document.getElementById('a-form-w').scrollIntoView({behavior:'smooth'});document.querySelectorAll('#a-tbody tr').forEach(r=>r.style.background='');const row=document.getElementById('ar-'+id);if(row)row.style.background='#333338'};
+function cancelEd(){S.editId=null;['a-nom','a-larg','a-prix','a-img','a-glb'].forEach(id=>document.getElementById(id).value='');document.getElementById('a-form-t').textContent='Ajouter un module';document.getElementById('a-add').classList.remove('hidden');document.getElementById('a-upd').classList.add('hidden');document.getElementById('a-cancel').classList.add('hidden');document.getElementById('a-form-w').classList.remove('edit-hl');document.querySelectorAll('#a-tbody tr').forEach(r=>r.style.background='')}
+document.getElementById('a-cancel').addEventListener('click',cancelEd);
+document.getElementById('a-add').addEventListener('click',async()=>{const n=document.getElementById('a-nom').value.trim(),c=document.getElementById('a-cat-s').value,l=parseInt(document.getElementById('a-larg').value),p=parseInt(document.getElementById('a-prix').value),img=document.getElementById('a-img').value.trim(),glb=document.getElementById('a-glb').value.trim();if(!n||!l||!p){toast('Remplissez les champs','error');return}const pay={ModuleProduit_nom:n,categorie:c,largeur_cm:l,prix_base:p,image_url:img,modele_3d_url:glb||null};try{if(S.apiOn){const cr=await apiFetch('/modules',{method:'POST',body:JSON.stringify(pay)});const rm=cr?.data||cr;if(rm?.ModuleProduit_id)S.modules.push(rm);else S.modules.push({...pay,ModuleProduit_id:Date.now()})}else S.modules.push({...pay,ModuleProduit_id:Date.now()});renderAdm();renderCat();toast('Module ajoute','success');['a-nom','a-larg','a-prix','a-img','a-glb'].forEach(id=>document.getElementById(id).value='')}catch(e){toast(e.message,'error')}});
+document.getElementById('a-upd').addEventListener('click',async()=>{if(!S.editId)return;const n=document.getElementById('a-nom').value.trim(),c=document.getElementById('a-cat-s').value,l=parseInt(document.getElementById('a-larg').value),p=parseInt(document.getElementById('a-prix').value),img=document.getElementById('a-img').value.trim(),glb=document.getElementById('a-glb').value.trim();if(!n||!l||!p){toast('Remplissez','error');return}const pay={ModuleProduit_nom:n,categorie:c,largeur_cm:l,prix_base:p,image_url:img,modele_3d_url:glb||null};try{if(!isLocal(S.editId)&&S.apiOn)await apiFetch(`/modules/${S.editId}`,{method:'PUT',body:JSON.stringify(pay)});const m=S.modules.find(x=>String(x.ModuleProduit_id)===String(S.editId));if(m)Object.assign(m,pay);cancelEd();renderAdm();renderCat();toast('Modifie','success')}catch(e){toast(e.message,'error')}});
+window.delAdmMod=async function(id){if(isLocal(id)){toast('Module par defaut non supprimable','error');return}if(!confirm('Supprimer ?'))return;try{if(S.apiOn)await apiFetch(`/modules/${id}`,{method:'DELETE'});S.modules=S.modules.filter(m=>String(m.ModuleProduit_id)!==String(id));renderAdm();renderCat();toast('Supprime','success')}catch(e){toast(e.message,'error')}};
+
+async function loadAdmUsr(){const body=document.getElementById('a-ubody');if(!S.apiOn||!S.token){body.innerHTML='<tr><td colspan="4" class="px-4 py-8 text-center text-gray-500 text-sm">Connectez-vous en admin</td></tr>';return}try{const d=await apiFetch('/admin/utilisateurs');S.users=Array.isArray(d)?d:(d?.data||[]);if(!S.users.length){body.innerHTML='<tr><td colspan="4" class="px-4 py-8 text-center text-gray-500 text-sm">Aucun utilisateur</td></tr>';return}const roles=['user','client','commercial','admin'];body.innerHTML=S.users.map(u=>{const isSelf=S.user&&String(u.id)===String(S.user.id);return`<tr class="border-t" style="border-color:#333" id="ur-${u.id}"><td class="px-4 py-3 text-white">${u.prenom||''} ${u.nom||''}</td><td class="px-4 py-3 text-gray-400">${u.email||''}</td><td class="px-4 py-3"><select class="role-select" data-uid="${u.id}" ${isSelf?'disabled':''}>${roles.map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r}</option>`).join('')}</select></td><td class="px-4 py-3">${isSelf?'<span class="text-gray-600 text-xs">—</span>':`<button onclick="delUsr(${u.id},'${(u.prenom||'')+' '+(u.nom||'')}')" class="text-red-400 hover:text-red-300 text-xs hover:bg-red-900/30 px-2 py-1 rounded"><i class="fas fa-trash"></i> Supprimer</button>`}</td></tr>`}).join('');body.querySelectorAll('.role-select').forEach(sel=>{if(sel.disabled)return;sel.addEventListener('change',async()=>{try{await apiFetch(`/admin/utilisateurs/${sel.dataset.uid}/role`,{method:'PATCH',body:JSON.stringify({role:sel.value})});const u=S.users.find(x=>String(x.id)===String(sel.dataset.uid));if(u)u.role=sel.value;toast('Role modifie','success')}catch(e){toast(e.message,'error');sel.value=S.users.find(x=>String(x.id)===String(sel.dataset.uid))?.role||'user'}})})}catch(e){body.innerHTML=`<tr><td colspan="4" class="px-4 py-8 text-center text-gray-500 text-sm">${e.message.includes('fetch')?'API non disponible':e.message}</td></tr>`}}
+window.delUsr=async function(id,nom){if(!confirm(`Supprimer "${nom.trim()}" ?`))return;try{await apiFetch(`/admin/utilisateurs/${id}`,{method:'DELETE'});S.users=S.users.filter(u=>String(u.id)!==String(id));loadAdmUsr();toast('Supprime','success')}catch(e){toast(e.message,'error')}};
+
+// ============ THREE.JS ============
+let scene,camera,renderer,controls,mGrp,sI=false,ray,mV;
+const gLoader=new GLTFLoader();
+const DC={pos:new THREE.Vector3(240,200,360),tgt:new THREE.Vector3(120,80,0)};
+
+// ========== DRAG ==========
+const DR={active:false,started:false,idx:-1,mdx:0,mdy:0,opx:0,opz:0,orot:0,thresh:5,floor:new THREE.Plane(new THREE.Vector3(0,1,0),0),hit:new THREE.Vector3()};
+
+function initScene(){
+  sI=true;const ct=document.getElementById('three-ct'),w=ct.clientWidth,h=ct.clientHeight;
+  scene=new THREE.Scene();scene.background=new THREE.Color(0x1a1a1d);scene.fog=new THREE.Fog(0x1a1a1d,700,1400);
+  camera=new THREE.PerspectiveCamera(42,w/h,1,2000);camera.position.copy(DC.pos);
+  renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(w,h);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
+  ct.appendChild(renderer.domElement);
+  controls=new OrbitControls(camera,renderer.domElement);controls.target.copy(DC.tgt);
+  controls.enableDamping=true;controls.dampingFactor=0.08;controls.enableZoom=true;controls.zoomSpeed=1.5;
+  controls.minDistance=60;controls.maxDistance=900;controls.enablePan=true;controls.panSpeed=0.8;
+  controls.maxPolarAngle=Math.PI*0.48;controls.minPolarAngle=0.1;controls.update();
+  scene.add(new THREE.AmbientLight(0xFFF5E6,1.8));
+  const dir=new THREE.DirectionalLight(0xFFFAF0,2.5);dir.position.set(200,350,300);dir.castShadow=true;
+  dir.shadow.mapSize.set(2048,2048);dir.shadow.camera.left=-300;dir.shadow.camera.right=400;dir.shadow.camera.top=300;dir.shadow.camera.bottom=-50;dir.shadow.camera.near=10;dir.shadow.camera.far=900;dir.shadow.bias=-0.001;scene.add(dir);
+  scene.add(new THREE.DirectionalLight(0xE8E0D8,0.6).translateX(-100).translateY(150).translateZ(200));
+  mGrp=new THREE.Group();scene.add(mGrp);ray=new THREE.Raycaster();mV=new THREE.Vector2();
+  createRoom();
+
+  // Événements drag
+  renderer.domElement.addEventListener('pointerdown',onPDown);
+  renderer.domElement.addEventListener('pointermove',onPMove);
+  renderer.domElement.addEventListener('pointerup',onPUp);
+  window.addEventListener('resize',resizeR);animate();
+}
+
+// CORRECTION CRITIQUE : r.top et non r.height
+function cXY(e){
+  const r=renderer.domElement.getBoundingClientRect();
+  return{x:e.clientX-r.left, y:e.clientY-r.top};
+}
+function toNDC(x,y){
+  mV.x=(x/renderer.domElement.clientWidth)*2-1;
+  mV.y=-(y/renderer.domElement.clientHeight)*2+1;
+}
+
+function onPDown(e){
+  if(e.button!==0)return;
+  const{x,y}=cXY(e);
+  toNDC(x,y);
+  ray.setFromCamera(mV,camera);
+  const hits=ray.intersectObjects(mGrp.children,true);
+  if(hits.length>0){
+    let o=hits[0].object;while(o.parent&&o.parent!==mGrp)o=o.parent;
+    const idx=mGrp.children.indexOf(o);
+    if(idx>=0){
+      DR.active=true;DR.started=false;DR.idx=idx;
+      DR.mdx=x;DR.mdy=y;
+      const pm=S.placed[idx];
+      DR.opx=pm.position.x;DR.opz=pm.position.z;DR.orot=pm.position.rot||0;
+      // Désactiver OrbitControls IMMÉDIATEMENT pour éviter le conflit
+      controls.enabled=false;
+      e.preventDefault();
+    }
+  }
+}
+
+function onPMove(e){
+  if(!DR.active)return;
+  const{x,y}=cXY(e);
+  const dx=x-DR.mdx,dy=y-DR.mdy;
+  if(!DR.started&&Math.sqrt(dx*dx+dy*dy)>DR.thresh){
+    DR.started=true;
+    hl(DR.idx);
+    document.getElementById('mod-tb').classList.add('hidden');
+    document.getElementById('pos-ind').classList.remove('hidden');
+    renderer.domElement.style.cursor='grabbing';
+  }
+  if(DR.started){
+    toNDC(x,y);
+    ray.setFromCamera(mV,camera);
+    if(ray.ray.intersectPlane(DR.floor,DR.hit)){
+      let nx=DR.hit.x,nz=DR.hit.z;
+      const pm=S.placed[DR.idx];
+      if(DR.orot===0){nz=0;nx=Math.max(SX,nx);nx=Math.min(nx,CX+MAXW-pm.data.largeur_cm)}
+      else{nx=PR/2;nz=Math.max(-MAXW+pm.data.largeur_cm,nz);nz=Math.min(nz,0)}
+      nx=Math.round(nx/5)*5;nz=Math.round(nz/5)*5;
+      pm.mesh.position.set(nx,10,nz);
+      pm.position.x=nx;pm.position.z=nz;
+      document.getElementById('pos-ind').textContent=`X: ${Math.round(nx)} cm   Z: ${Math.round(nz)} cm`;
+    }
+  }
+}
+
+function onPUp(e){
+  if(!DR.active)return;
+  const{x,y}=cXY(e);
+  const dx=x-DR.mdx,dy=y-DR.mdy;
+  if(DR.started){
+    const pm=S.placed[DR.idx];
+    pm.mesh.position.y=0;
+    unhl(DR.idx);
+    S.sel=DR.idx;
+    const pmd=S.placed[S.sel];
+    document.getElementById('tb-name').innerHTML=`<i class="fas ${CI[pmd.data.categorie]}" style="color:${CC[pmd.data.categorie]}"></i>${pmd.data.ModuleProduit_nom} — ${pmd.data.largeur_cm} cm — ${fmtP(pmd.data.prix_base)}`;
+    document.getElementById('mod-tb').classList.remove('hidden');
+    document.getElementById('pos-ind').classList.add('hidden');
+    updateUI();toast('Module deplace','info');
+  }else{
+    // Clic simple = sélection
+    if(S.sel>=0)unhl(S.sel);
+    S.sel=DR.idx;hl(S.sel);
+    const pm=S.placed[S.sel];
+    document.getElementById('tb-name').innerHTML=`<i class="fas ${CI[pm.data.categorie]}" style="color:${CC[pm.data.categorie]}"></i>${pm.data.ModuleProduit_nom} — ${pm.data.largeur_cm} cm — ${fmtP(pm.data.prix_base)}`;
+    document.getElementById('mod-tb').classList.remove('hidden');
+  }
+  controls.enabled=true;
+  DR.active=false;DR.started=false;DR.idx=-1;
+  renderer.domElement.style.cursor='default';
+}
+
+function resizeR(){if(!renderer)return;const c=document.getElementById('three-ct'),w=c.clientWidth,h=c.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h)}
+function animate(){requestAnimationFrame(animate);controls.update();updateLbl();renderer.render(scene,camera)}
+
+function createRoom(){
+  const RW=500,RD=350,RH=250;
+  const fc=document.createElement('canvas');fc.width=512;fc.height=512;const fx=fc.getContext('2d');
+  fx.fillStyle='#C8A87A';fx.fillRect(0,0,512,512);
+  for(let i=0;i<120;i++){const y=Math.random()*512;fx.strokeStyle=`rgba(140,110,65,${Math.random()*0.3})`;fx.lineWidth=Math.random()*1.5+0.3;fx.beginPath();fx.moveTo(0,y);for(let x=0;x<512;x+=12)fx.lineTo(x,y+Math.sin(x*0.015)*2.5+(Math.random()-0.5)*1.5);fx.stroke()}
+  for(let i=1;i<7;i++){fx.strokeStyle='rgba(100,80,45,0.3)';fx.lineWidth=1.5;fx.beginPath();fx.moveTo(i*512/7,0);fx.lineTo(i*512/7,512);fx.stroke()}
+  const ft=new THREE.CanvasTexture(fc);ft.wrapS=ft.wrapT=THREE.RepeatWrapping;ft.repeat.set(10,7);
+  const fl=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:ft,roughness:0.55}));fl.rotation.x=-Math.PI/2;fl.position.set(RW/2,0,RD/2);fl.receiveShadow=true;scene.add(fl);
+  const bk=new THREE.Mesh(new THREE.PlaneGeometry(RW,RH),new THREE.MeshStandardMaterial({color:0xDEDAD6,roughness:0.92}));bk.position.set(RW/2,RH/2,0);bk.receiveShadow=true;scene.add(bk);
+  const lt=new THREE.Mesh(new THREE.PlaneGeometry(RD,RH),new THREE.MeshStandardMaterial({color:0xE0DCD8,roughness:0.92}));lt.rotation.y=Math.PI/2;lt.position.set(0,RH/2,RD/2);lt.receiveShadow=true;scene.add(lt);
+  const cl=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({color:0xF2EFEA,roughness:0.95}));cl.rotation.x=Math.PI/2;cl.position.set(RW/2,RH,RD/2);scene.add(cl);
+  const cL=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(CX,0,0),new THREE.Vector3(CX,RH,0)]),new THREE.LineBasicMaterial({color:0xD97706,transparent:true,opacity:0}));cL.name='cornerLine';scene.add(cL);
+}
+
+const MT={cab:new THREE.MeshStandardMaterial({color:0xF0EFED,roughness:0.45,metalness:0.02}),door:new THREE.MeshStandardMaterial({color:0xFAFAFA,roughness:0.12,metalness:0.03}),frm:new THREE.MeshStandardMaterial({color:0xE8E6E2,roughness:0.3}),dk:new THREE.MeshStandardMaterial({color:0x141414,roughness:0.7}),chr:new THREE.MeshStandardMaterial({color:0xD0D0D0,roughness:0.06,metalness:0.97}),inx:new THREE.MeshStandardMaterial({color:0x8A929A,roughness:0.2,metalness:0.75}),ixd:new THREE.MeshStandardMaterial({color:0x5A6268,roughness:0.25,metalness:0.7}),ct:new THREE.MeshStandardMaterial({color:0xC0B8A8,roughness:0.35,metalness:0.03}),spl:new THREE.MeshStandardMaterial({color:0x8A8680,roughness:0.25,metalness:0.08}),bgl:new THREE.MeshStandardMaterial({color:0x080808,roughness:0.03,metalness:0.3}),ogl:new THREE.MeshStandardMaterial({color:0xFF7733,emissive:0xFF5500,emissiveIntensity:0.5,roughness:0.5}),rng:new THREE.MeshStandardMaterial({color:0xFF3300,emissive:0xCC2200,emissiveIntensity:0.7,roughness:0.3}),hdb:new THREE.MeshStandardMaterial({color:0x9AA0A8,roughness:0.15,metalness:0.8}),chm:new THREE.MeshStandardMaterial({color:0xB0B4BA,roughness:0.12,metalness:0.85}),lit:new THREE.MeshStandardMaterial({color:0xFFFFDD,emissive:0xFFFFAA,emissiveIntensity:1}),fhd:new THREE.MeshStandardMaterial({color:0xC8C8C8,roughness:0.08,metalness:0.95})};
+function bx(w,h,d,m){return new THREE.Mesh(new THREE.BoxGeometry(Math.max(.1,w),Math.max(.1,h),Math.max(.1,d)),m)}
+function cy(r,h,m,s){return new THREE.Mesh(new THREE.CylinderGeometry(Math.max(.01,r),Math.max(.01,r),Math.max(.01,h),s||12),m)}
+function A(g,m,x,y,z,rx,ry,rz){m.position.set(x,y,z);if(rx||ry||rz)m.rotation.set(rx||0,ry||0,rz||0);g.add(m);return m}
+function sh(g){g.traverse(c=>{if(c.isMesh){c.castShadow=true;c.receiveShadow=true}})}
+function mkDoor(w,h){const g=new THREE.Group();A(g,bx(w,h,5,MT.door),0,0,2.5);const i=6;A(g,bx(w,i,1,MT.frm),0,h/2-i/2,5.5);A(g,bx(w,i,1,MT.frm),0,-h/2+i/2,5.5);A(g,bx(i,h-i*2,1,MT.frm),-w/2+i/2,0,5.5);A(g,bx(i,h-i*2,1,MT.frm),w/2-i/2,0,5.5);const hx=w/2-10;A(g,cy(1.2,14,MT.chr,8).rotateZ(Math.PI/2),hx,0,6);A(g,cy(0.8,3,MT.chr,8),hx,6,6);A(g,cy(0.8,3,MT.chr,8),hx,-6,6);return g}
+function mkDoors(w,h,depth){const g=new THREE.Group();if(w>55){const dw=(w-10)/2-2,dh=h-6;for(let s=-1;s<=1;s+=2){const d=mkDoor(dw,dh);d.position.x=s*(dw/2+2);g.add(d)}}else g.add(mkDoor(w-6,h-6));g.position.set(0,h/2,depth);return g}
+function addUp(g,w,by){const uy=by+4+ECART;A(g,bx(w-2,HH,PH-2,MT.cab),0,uy+HH/2,PH/2);g.add(mkDoors(w,HH,PH))}
+function addPl(g,w){A(g,bx(w,12,PR,MT.dk),0,6,PR/2)}
+function addCt(g,w){A(g,bx(w+4,3.5,PR+6,MT.ct),0,HB+1.75,PR/2);A(g,bx(w+4,1.5,1.5,MT.ct),0,HB-0.5,PR+2.5)}
+function addSp(g,w){A(g,bx(w,ECART-6,1.5,MT.spl),0,HB+4+(ECART-6)/2,2)}
+function createProc(data){const w=Math.max(20,data.largeur_cm||60),cat=data.categorie,nom=(data.ModuleProduit_nom||'').toLowerCase();const g=new THREE.Group();switch(cat){case'meuble_bas':addPl(g,w);A(g,bx(w-4,HB-16,PR-6,MT.cab),0,14+(HB-16)/2,PR/2);g.add(mkDoors(w,HB-16,PR));addCt(g,w);addSp(g,w);addUp(g,w,HB);break;case'meuble_haut':{const uy=HB+4+ECART;A(g,bx(w-2,HH,PH-2,MT.cab),0,uy+HH/2,PH/2);g.add(mkDoors(w,HH,PH));break}case'evier':{addPl(g,w);A(g,bx(w-4,HB-16,PR-6,MT.cab),0,14+(HB-16)/2,PR/2);const dh=(HB-16-6)/3;for(let i=0;i<3;i++){const dy=14+i*(dh+3);A(g,bx(w-8,dh,4,MT.door),0,dy+dh/2,PR-1);A(g,cy(0.8,8,MT.chr,8).rotateZ(Math.PI/2),0,dy+dh/2,PR+2)}addCt(g,w);const isD=nom.includes('2');if(isD){const bw=(w-24)/2-3;for(let s=-1;s<=1;s+=2){A(g,bx(bw,16,PR*0.4,MT.inx),s*(bw/2+6),HB+1,PR/2+4);A(g,bx(bw+2,2,PR*0.4+2,MT.inx),s*(bw/2+6),HB+6,PR/2+4)}}else{A(g,bx(w-24,18,PR*0.45,MT.inx),0,HB+1,PR/2+4);A(g,bx(w-22,2,PR*0.45+2,MT.inx),0,HB+6,PR/2+4)}const fx=w*0.2;A(g,cy(4,2,MT.chr,12),fx,HB+3,PR*0.22);A(g,cy(2,38,MT.chr,10),fx,HB+21,PR*0.22);A(g,cy(2,20,MT.chr,10).rotateZ(Math.PI/2),fx+10,HB+40,PR*0.22);A(g,cy(1.5,10,MT.chr,10),fx+20,HB+36,PR*0.22);A(g,cy(0.8,10,MT.chr,8),fx+4,HB+44,PR*0.22);addSp(g,w);addUp(g,w,HB);break}case'electromenager':{addPl(g,w);A(g,bx(w-4,HB-16,PR-6,MT.cab),0,14+(HB-16)/2,PR/2);if(nom.includes('four')){A(g,bx(w-2,HB-16,3,MT.ixd),0,14+(HB-16)/2,PR-0.5);A(g,bx(w-14,(HB-16)*0.75,1,MT.bgl),0,14+(HB-16)*0.42,PR+2);A(g,bx(w-24,(HB-16)*0.65,0.3,MT.ogl),0,14+(HB-16)*0.42,PR+2.8);A(g,bx(w-14,6,1,MT.inx),0,HB-10,PR+2);const led=new THREE.Mesh(new THREE.SphereGeometry(1.2,8,8),new THREE.MeshStandardMaterial({color:0x00FF44,emissive:0x00FF44,emissiveIntensity:1}));led.position.set(w/2-10,HB-10,PR+3);g.add(led);A(g,cy(0.8,w*0.3,MT.chr,8).rotateZ(Math.PI/2),0,14+(HB-16)*0.08,PR+3);addCt(g,w);addSp(g,w);addUp(g,w,HB)}else{g.add(mkDoors(w,HB-16,PR));A(g,bx(w-6,2,PR-8,MT.bgl),0,HB+2,PR/2);A(g,bx(w-2,1,PR+4,MT.inx),0,HB+3.5,PR/2);const rg=new THREE.TorusGeometry(Math.max(.1,10),1.2,8,32);[[-w*.22,HB+4.5,PR*.3],[w*.22,HB+4.5,PR*.3],[-w*.22,HB+4.5,PR*.7],[w*.22,HB+4.5,PR*.7]].forEach(p=>{const r=new THREE.Mesh(rg,MT.rng);r.rotation.x=-Math.PI/2;r.position.set(...p);g.add(r);const d=new THREE.Mesh(new THREE.SphereGeometry(1.5,8,8),MT.rng);d.position.set(...p);g.add(d)});addSp(g,w);addUp(g,w,HB)}break}case'colonne':{addPl(g,w);A(g,bx(w-4,HC-14,PR-6,MT.cab),0,14+(HC-14)/2,PR/2);if(nom.includes('réfrig')||nom.includes('frigo')||nom.includes('refrig')){const fH=HC*0.6,zH=HC*0.32,gpH=HC-fH-zH-14;A(g,bx(w-3,fH-6,4,MT.inx),0,HC-fH/2-4,PR-0.5);A(g,cy(1.5,fH*0.5,MT.fhd,8),w/2-8,HC-fH*0.4,PR+3);A(g,bx(w-3,zH-6,4,MT.inx),0,zH/2+4,PR-0.5);A(g,cy(1.5,zH*0.5,MT.fhd,8),w/2-8,zH*0.4+4,PR+3);A(g,bx(w+2,gpH,PR+6,MT.dk),0,zH+gpH/2+6,PR/2);const scr=new THREE.Mesh(new THREE.SphereGeometry(2,8,8),new THREE.MeshStandardMaterial({color:0x003366,emissive:0x004488,emissiveIntensity:0.3}));scr.position.set(0,HC-fH-8,PR+3);g.add(scr);for(let i=-2;i<=2;i++)A(g,bx(w*0.6,1,1,MT.dk),0,16+i*3,PR+1)}else{const oH=HC*0.25,oY=HC*0.38,tH=HC-oY-oH-14,bH=oY-14;if(tH>25){const td=mkDoors(w,tH,PR);td.position.y=oY+oH+14+tH/2;g.add(td)}if(bH>25){const bd=mkDoors(w,bH,PR);bd.position.y=14+bH/2;g.add(bd)}A(g,bx(w-4,oH+4,PR+2,MT.ixd),0,oY+oH/2,PR/2-1);A(g,bx(w-18,oH-8,1,MT.bgl),0,oY+oH/2,PR+1);A(g,bx(w-28,oH-16,0.3,MT.ogl),0,oY+oH/2,PR+2);A(g,cy(0.8,w*0.35,MT.chr,8).rotateZ(Math.PI/2),0,oY+oH-4,PR+3)}break}case'hotte':{const hH=32,hD=PR*0.5,bY=HB+4+ECART+HH+6;A(g,bx(w+4,hH,hD,MT.hdb),0,bY+hH/2,hD/2);A(g,bx(w+8,3,hD+4,MT.inx),0,bY,hD/2);for(let i=0;i<7;i++)A(g,bx(w-8,0.8,0.8,MT.chr),0,bY+4+i*(hH-12)/6,hD+1);A(g,bx(w*0.35,55,hD*0.5,MT.chm),0,bY+hH+27.5,hD/2);A(g,bx(w*0.35+4,3,hD*0.5+4,MT.inx),0,bY+hH+55+1.5,hD/2);const lg=new THREE.SphereGeometry(2,8,8);for(let s=-1;s<=1;s+=2){const l=new THREE.Mesh(lg,MT.lit);l.position.set(s*(w/2-12),bY-2,hD/2);g.add(l)}A(g,cy(1.5,2,MT.chr,8),0,bY+hH-4,hD+3);break}}sh(g);return g}
+
+async function buildMod(data){if(data.modele_3d_url&&data.categorie!=='colonne'){try{const gltf=await new Promise((r,j)=>gLoader.load(data.modele_3d_url,r,undefined,j));const m=gltf.scene;const bb=new THREE.Box3().setFromObject(m);const sz=bb.getSize(new THREE.Vector3());if(sz.x>0.1)m.scale.setScalar(data.largeur_cm/sz.x);m.position.y=-bb.min.y*(data.largeur_cm/Math.max(.1,sz.x));sh(m);return m}catch(e){console.warn('GLB failed:',e)}}return createProc(data)}
+
+function recalc(){const fl=S.placed.filter(p=>['meuble_bas','evier','electromenager','colonne'].includes(p.data.categorie));let x=SX,z=0,onL=false;fl.forEach(pm=>{if(S.layout==='en_l'&&!onL&&x+pm.data.largeur_cm>CX)onL=true;if(onL){pm.position={x:PR/2,z:-(z+pm.data.largeur_cm/2),rot:-Math.PI/2,above:false};z+=pm.data.largeur_cm}else{pm.position={x:x+pm.data.largeur_cm/2,z:0,rot:0,above:false};x+=pm.data.largeur_cm}});S.placed.filter(p=>p.data.categorie==='hotte').forEach(pm=>{const b=fl.find(f=>['meuble_bas','evier'].includes(f.data.categorie));if(b)pm.position={...b.position,above:true}});S.placed.filter(p=>p.data.categorie==='meuble_haut').forEach(pm=>{const b=[...fl].reverse().find(f=>['meuble_bas','evier','electromenager'].includes(f.data.categorie));if(b)pm.position={...b.position,above:true};else pm.position={x:SX+pm.data.largeur_cm/2,z:0,rot:0,above:true}})}
+function totFW(){return S.placed.filter(p=>['meuble_bas','evier','electromenager','colonne'].includes(p.data.categorie)).reduce((s,p)=>s+(p.data.largeur_cm||0),0)}
+async function addMod(data){const fc=['meuble_bas','evier','electromenager','colonne'];if(fc.includes(data.categorie)&&totFW()+data.largeur_cm>MAXW){toast('Limite de 400 cm','error');return}const pm={data,position:{x:0,z:0,rot:0,above:false},mesh:null};S.placed.push(pm);recalc();try{const mesh=await buildMod(data);pm.mesh=mesh;mesh.userData.pi=S.placed.length-1;mGrp.add(mesh);mesh.position.set(pm.position.x,0,pm.position.z);mesh.rotation.y=pm.position.rot||0;updateUI();updCorner();toast(`${data.ModuleProduit_nom} ajoute`,'success')}catch(err){S.placed.pop();recalc();toast("Erreur ajout",'error');console.error(err)}}
+function removeSel(){if(S.sel<0||S.sel>=S.placed.length)return;const pm=S.placed[S.sel];if(pm.mesh){mGrp.remove(pm.mesh);pm.mesh.traverse(c=>{if(c.geometry)c.geometry.dispose()})}S.placed.splice(S.sel,1);S.sel=-1;document.getElementById('mod-tb').classList.add('hidden');recalc();S.placed.forEach((p,i)=>{p.mesh.userData.pi=i;p.mesh.position.set(p.position.x,0,p.position.z);p.mesh.rotation.y=p.position.rot||0});updateUI();updCorner();toast('Module supprime','info')}
+function clearScene(){while(mGrp.children.length){const c=mGrp.children[0];mGrp.remove(c);c.traverse(o=>{if(o.geometry)o.geometry.dispose()})}S.placed=[];S.sel=-1;document.getElementById('mod-tb').classList.add('hidden');updateUI();updCorner()}
+function updCorner(){const l=scene.getObjectByName('cornerLine');if(l)l.material.opacity=S.layout==='en_l'?0.4:0}
+
+function hl(i){const m=mGrp.children[i];if(!m)return;m.traverse(c=>{if(c.isMesh){c.userData._oe=c.material.emissive?c.material.emissive.getHex():0;c.userData._oi=c.material.emissiveIntensity||0;if(c.material.emissive){c.material.emissive.setHex(0xD97706);c.material.emissiveIntensity=0.35}}})}
+function unhl(i){const m=mGrp.children[i];if(!m)return;m.traverse(c=>{if(c.isMesh&&c.userData._oe!==undefined&&c.material.emissive){c.material.emissive.setHex(c.userData._oe);c.material.emissiveIntensity=c.userData._oi}})}
+
+function updateLbl(){if(!camera)return;const ct=document.getElementById('lbl-ct'),vw=renderer.domElement.clientWidth,vh=renderer.domElement.clientHeight;let h='';S.placed.forEach((pm,i)=>{if(!pm.mesh)return;const p=new THREE.Vector3();pm.mesh.getWorldPosition(p);p.y=pm.data.categorie==='colonne'?HC+20:pm.data.categorie==='hotte'?HB+4+ECART+HH+50:HB+30;if(pm.position.rot){const t=p.x;p.x=-p.z;p.z=t}p.project(camera);if(p.z>1)return;h+=`<div class="module-label" style="left:${(p.x*.5+.5)*vw}px;top:${(-p.y*.5+.5)*vh}px;opacity:${i===S.sel?1:0.6}">${pm.data.ModuleProduit_nom}<br>${pm.data.largeur_cm} cm · ${fmtP(pm.data.prix_base)}</div>`});ct.innerHTML=h}
+
+// Drag & Drop catalogue → scène
+const vp=document.getElementById('viewport'),dInd=document.getElementById('drop-ind');
+vp.addEventListener('dragenter',e=>{e.preventDefault();e.stopPropagation();vp.classList.add('drop-active');dInd.classList.remove('hidden');vp.querySelectorAll(':scope > *:not(#drop-ind)').forEach(el=>el.style.pointerEvents='none')});
+vp.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();e.dataTransfer.dropEffect='copy'});
+vp.addEventListener('dragleave',e=>{e.preventDefault();if(!vp.contains(e.relatedTarget)){vp.classList.remove('drop-active');dInd.classList.add('hidden');vp.querySelectorAll(':scope > *').forEach(el=>el.style.pointerEvents='')}});
+vp.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();vp.classList.remove('drop-active');dInd.classList.add('hidden');vp.querySelectorAll(':scope > *').forEach(el=>el.style.pointerEvents='');try{let raw=e.dataTransfer.getData('text/plain');if(!raw)raw=e.dataTransfer.getData('application/json');if(raw){const mod=JSON.parse(raw);if(mod&&mod.ModuleProduit_id)addMod(mod)}else toast('Aucune donnee','error')}catch(err){console.error(err);toast('Erreur depot','error')}});
+
+document.getElementById('btn-zi').addEventListener('click',()=>{if(!controls)return;camera.position.addScaledVector(new THREE.Vector3().subVectors(controls.target,camera.position).normalize(),30);controls.update()});
+document.getElementById('btn-zo').addEventListener('click',()=>{if(!controls)return;camera.position.addScaledVector(new THREE.Vector3().subVectors(controls.target,camera.position).normalize(),-30);controls.update()});
+document.getElementById('btn-zr').addEventListener('click',()=>{if(!camera||!controls)return;camera.position.copy(DC.pos);controls.target.copy(DC.tgt);controls.update()});
+document.getElementById('btn-lin').addEventListener('click',()=>{S.layout='lineaire';document.getElementById('btn-lin').style.background='#D97706';document.getElementById('btn-lin').style.color='#fff';document.getElementById('btn-el').style.background='transparent';document.getElementById('btn-el').style.color='#9CA3AF';recalc();S.placed.forEach(p=>{if(p.mesh){p.mesh.position.set(p.position.x,0,p.position.z);p.mesh.rotation.y=p.position.rot||0}});updCorner()});
+document.getElementById('btn-el').addEventListener('click',()=>{S.layout='en_l';document.getElementById('btn-el').style.background='#D97706';document.getElementById('btn-el').style.color='#fff';document.getElementById('btn-lin').style.background='transparent';document.getElementById('btn-lin').style.color='#9CA3AF';recalc();S.placed.forEach(p=>{if(p.mesh){p.mesh.position.set(p.position.x,0,p.position.z);p.mesh.rotation.y=p.position.rot||0}});updCorner()});
+document.getElementById('btn-clear').addEventListener('click',()=>{if(S.placed.length){clearScene();toast('Scene effacee','info')}});
+document.getElementById('btn-del-mod').addEventListener('click',removeSel);
+document.getElementById('btn-login-hdr').addEventListener('click',()=>showView('login'));
+document.getElementById('btn-sb-tog').addEventListener('click',()=>{S.sbO=!S.sbO;document.getElementById('sidebar').classList.toggle('-translate-x-full',!S.sbO);document.getElementById('app-body').classList.toggle('sidebar-open',S.sbO)});
+document.getElementById('sb-overlay').addEventListener('click',()=>{S.sbO=false;document.getElementById('sidebar').classList.add('-translate-x-full');document.getElementById('app-body').classList.remove('sidebar-open')});
+
+async function init(){await checkApi();S.modules=[...FB];if(S.apiOn){try{const d=await apiFetch('/modules');const am=Array.isArray(d)?d:(d?.data||[]);if(am.length){const ids=new Set(am.map(m=>m.ModuleProduit_id));S.modules=[...am,...S.modules.filter(m=>!ids.has(m.ModuleProduit_id))]}}catch(e){console.warn('API modules failed:',e.message)}}updateAuth();renderTpl();renderCat();updateUI();showView('app')}
+init();
+</script>
+</body>
+</html>
