@@ -6,15 +6,16 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('projet_cuisines', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('client_id')->nullable();          // nullable : visiteur non connecté (RG-05)
             $table->foreign('client_id')
-                  ->references('id')->on('utilisateurs')
-                  ->nullOnDelete();
+                ->references('id')->on('utilisateurs')
+                ->nullOnDelete();
 
             $table->string('nom')->nullable();
             $table->unsignedInteger('longueur_cm');
@@ -23,7 +24,7 @@ return new class extends Migration {
             $table->enum('forme', ['lineaire', 'en_L']);    // RG-01
             $table->decimal('prix_estime', 12, 2)->default(0); // RG-03
             $table->enum('statut', ['brouillon', 'devis_demande', 'traite'])
-                  ->default('brouillon');
+                ->default('brouillon');
             $table->timestamps();
 
             $table->index(['client_id', 'statut']);

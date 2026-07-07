@@ -2,20 +2,33 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 
 // app/Models/ProjetCuisine.php
 class ProjetCuisine extends Model
 {
     use HasUuids;
-    protected $table = 'projet_cuisines';
-    protected $fillable = ['client_id', 'nom', 'longueur_cm', 'largeur_cm',
-                           'hauteur_cm', 'forme', 'prix_estime', 'statut'];
 
-    public function client() { return $this->belongsTo(Utilisateur::class, 'client_id'); }
-    public function modules() { return $this->hasMany(ProjetModule::class, 'projet_id'); }
-    public function devis() { return $this->hasOne(Devis::class, 'projet_id'); }
+    protected $table = 'projet_cuisines';
+
+    protected $fillable = ['client_id', 'nom', 'longueur_cm', 'largeur_cm',
+        'hauteur_cm', 'forme', 'prix_estime', 'statut'];
+
+    public function client()
+    {
+        return $this->belongsTo(Utilisateur::class, 'client_id');
+    }
+
+    public function modules()
+    {
+        return $this->hasMany(ProjetModule::class, 'projet_id');
+    }
+
+    public function devis()
+    {
+        return $this->hasOne(Devis::class, 'projet_id');
+    }
     // app/Models/ProjetCuisine.php
 
     public function recalculerPrixEstime(): void

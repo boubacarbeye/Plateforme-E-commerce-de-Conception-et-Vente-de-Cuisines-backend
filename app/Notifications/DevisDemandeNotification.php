@@ -12,7 +12,10 @@ class DevisDemandeNotification extends Notification
 
     public function __construct(public ProjetCuisine $projet, public string $typeDemande) {}
 
-    public function via($notifiable): array { return ['database']; }
+    public function via($notifiable): array
+    {
+        return ['database'];
+    }
 
     public function toArray($notifiable): array
     {
@@ -20,7 +23,7 @@ class DevisDemandeNotification extends Notification
             'projet_id' => $this->projet->id,
             'client_nom' => $this->projet->client->nom ?? 'Visiteur',
             'message' => "Nouvelle demande de {$this->typeDemande} pour le projet #{$this->projet->id}",
-            'url' => "/admin/projets/{$this->projet->id}"
+            'url' => "/admin/projets/{$this->projet->id}",
         ];
     }
 }

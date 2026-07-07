@@ -1,10 +1,11 @@
 <?php
 
 // app/Policies/ProjetPolicy.php
+
 namespace App\Policies;
 
-use App\Models\Utilisateur;
 use App\Models\ProjetCuisine;
+use App\Models\Utilisateur;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class ProjetPolicy

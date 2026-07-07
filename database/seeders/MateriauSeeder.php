@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
 use App\Models\Materiau;
+use Illuminate\Database\Seeder;
 
 class MateriauSeeder extends Seeder
 {
@@ -18,6 +17,8 @@ class MateriauSeeder extends Seeder
             ['nom' => 'Poignée barre inox', 'type' => 'poignee', 'supplement_prix' => 8.00],
             ['nom' => 'Finition brillante', 'type' => 'finition', 'supplement_prix' => 15.00],
         ];
-        foreach ($data as $d) Materiau::create(array_merge($d, ['actif' => true]));
+        foreach ($data as $d) {
+            Materiau::create(array_merge($d, ['actif' => true]));
+        }
     }
 }

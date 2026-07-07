@@ -1,12 +1,12 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\ModuleProduitController;
-use App\Http\Controllers\MateriauController;
-use App\Http\Controllers\ProjetCuisineController;
 use App\Http\Controllers\DevisController;
-use App\Http\Controllers\UtilisateurController; // <-- AJOUT
+use App\Http\Controllers\MateriauController;
+use App\Http\Controllers\ModuleProduitController;
+use App\Http\Controllers\ProjetCuisineController;
+use App\Http\Controllers\UtilisateurController;
+use Illuminate\Support\Facades\Route; // <-- AJOUT
 
 // Routes Publiques
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -20,7 +20,7 @@ Route::get('/projets/{id}', [ProjetCuisineController::class, 'show']);
 Route::middleware('auth:api')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
-    
+
     Route::get('/projets', [ProjetCuisineController::class, 'index']);
     Route::put('/projets/{id}', [ProjetCuisineController::class, 'update']);
     Route::delete('/projets/{id}', [ProjetCuisineController::class, 'destroy']); // <-- AJOUT (Suppression projet)
@@ -33,7 +33,7 @@ Route::middleware(['auth:api', 'role:admin'])->group(function () {
     Route::post('/modules', [ModuleProduitController::class, 'store']);
     Route::put('/modules/{id}', [ModuleProduitController::class, 'update']);
     Route::delete('/modules/{id}', [ModuleProduitController::class, 'destroy']);
-    
+
     // Matériaux
     Route::post('/materiaux', [MateriauController::class, 'store']);
     Route::put('/materiaux/{id}', [MateriauController::class, 'update']);

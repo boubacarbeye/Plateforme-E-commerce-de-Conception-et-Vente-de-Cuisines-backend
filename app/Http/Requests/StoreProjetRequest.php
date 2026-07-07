@@ -7,7 +7,10 @@ use Illuminate\Foundation\Http\FormRequest;
 // app/Http/Requests/StoreProjetRequest.php
 class StoreProjetRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool
+    {
+        return true;
+    }
 
     public function rules(): array
     {

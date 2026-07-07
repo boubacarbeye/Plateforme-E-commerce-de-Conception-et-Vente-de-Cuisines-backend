@@ -1,18 +1,21 @@
 <?php
+
 // app/Models/Utilisateur.php
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Tymon\JWTAuth\Contracts\JWTSubject;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class Utilisateur extends Authenticatable implements JWTSubject
 {
     use HasUuids, Notifiable;
 
     protected $fillable = ['nom', 'prenom', 'email', 'telephone', 'password', 'role'];
+
+    protected $hidden = ['password', 'remember_token'];
 
     // Hachage automatique en bcrypt à l'assignation
     public function setPasswordAttribute($value): void
@@ -30,11 +33,12 @@ class Utilisateur extends Authenticatable implements JWTSubject
     {
         return [
             'role' => $this->role,
-            'nom' => $this->prenom . ' ' . $this->nom,
+            'nom' => $this->prenom.' '.$this->nom,
         ];
     }
 
-    public function projets() {
+    public function projets()
+    {
         return $this->hasMany(ProjetCuisine::class, 'client_id');
     }
 }

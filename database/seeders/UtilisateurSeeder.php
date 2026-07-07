@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Utilisateur;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Database\Seeder;
 
 class UtilisateurSeeder extends Seeder
 {
@@ -15,8 +14,8 @@ class UtilisateurSeeder extends Seeder
             'nom' => 'Admin',
             'prenom' => 'DGS',
             'email' => 'admin@dgs.com',
-            'password' => Hash::make('password'), // Mot de passe : password
-            'role' => 'admin'
+            'password' => 'password', // Mot de passe : password (haché automatiquement par le modèle)
+            'role' => 'admin',
         ]);
 
         // Compte Commercial
@@ -24,8 +23,8 @@ class UtilisateurSeeder extends Seeder
             'nom' => 'Commercial',
             'prenom' => 'Jean',
             'email' => 'commercial@dgs.com',
-            'password' => Hash::make('password'),
-            'role' => 'commercial'
+            'password' => 'password',
+            'role' => 'commercial',
         ]);
 
         // Compte Client
@@ -33,8 +32,8 @@ class UtilisateurSeeder extends Seeder
             'nom' => 'Dupont',
             'prenom' => 'Marie',
             'email' => 'marie.dupont@email.com',
-            'password' => Hash::make('password'),
-            'role' => 'client'
+            'password' => 'password',
+            'role' => 'client',
         ]);
     }
 }

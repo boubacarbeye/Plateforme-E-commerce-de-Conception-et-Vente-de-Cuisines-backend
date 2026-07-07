@@ -27,6 +27,7 @@ class MateriauController extends Controller
         $data['actif'] = true;
 
         $materiau = Materiau::create($data);
+
         return response()->json($materiau, 201);
     }
 
@@ -42,13 +43,16 @@ class MateriauController extends Controller
         ]);
 
         $materiau->update($data);
+
         return response()->json($materiau);
     }
+
     // Admin : Supprimer (désactiver)
     public function destroy($id)
     {
         $materiau = Materiau::findOrFail($id);
         $materiau->update(['actif' => false]); // On désactive au lieu de supprimer pour préserver l'historique
+
         return response()->json(['message' => 'Matériau supprimé avec succès.']);
-    }    
+    }
 }

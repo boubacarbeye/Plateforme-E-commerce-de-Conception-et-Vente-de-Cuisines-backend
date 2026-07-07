@@ -16,7 +16,7 @@ class ModuleProduitController extends Controller
         );
     }
 
-      // Dans store()
+    // Dans store()
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -34,7 +34,7 @@ class ModuleProduitController extends Controller
             $path = $request->file('image')->store('modules', 'public');
             $data['image_url'] = Storage::url($path);
         }
-        
+
         // Gestion du fichier 3D
         if ($request->hasFile('model_3d')) {
             $path3d = $request->file('model_3d')->store('modules', 'public');
@@ -42,6 +42,7 @@ class ModuleProduitController extends Controller
         }
 
         $module = ModuleProduit::create($data);
+
         return response()->json($module, 201);
     }
 
@@ -60,16 +61,21 @@ class ModuleProduitController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            if ($module->image_url) { Storage::disk('public')->delete(str_replace('/storage/', '', $module->image_url)); }
+            if ($module->image_url) {
+                Storage::disk('public')->delete(str_replace('/storage/', '', $module->image_url));
+            }
             $data['image_url'] = Storage::url($request->file('image')->store('modules', 'public'));
         }
 
         if ($request->hasFile('model_3d')) {
-            if ($module->model_3d_url) { Storage::disk('public')->delete(str_replace('/storage/', '', $module->model_3d_url)); }
+            if ($module->model_3d_url) {
+                Storage::disk('public')->delete(str_replace('/storage/', '', $module->model_3d_url));
+            }
             $data['model_3d_url'] = Storage::url($request->file('model_3d')->store('modules', 'public'));
         }
 
         $module->update($data);
+
         return response()->json($module);
     }
 
@@ -78,6 +84,7 @@ class ModuleProduitController extends Controller
     {
         $module = ModuleProduit::findOrFail($id);
         $module->update(['actif' => false]);
+
         return response()->json(['message' => 'Module désactivé avec succès.']);
     }
 }

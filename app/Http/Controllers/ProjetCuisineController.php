@@ -38,8 +38,10 @@ class ProjetCuisineController extends Controller
     {
         // On charge le projet AVEC ses modules, les infos des modules et des matériaux
         $projet = ProjetCuisine::with('modules.module', 'modules.materiau', 'client')->findOrFail($id);
+
         return response()->json($projet);
     }
+
     public function update(Request $request, $id)
     {
         $projet = ProjetCuisine::findOrFail($id);
@@ -71,22 +73,24 @@ class ProjetCuisineController extends Controller
 
         return response()->json([
             'message' => 'Projet mis à jour et prix recalculé.',
-            'projet' => $projet->load('modules.module', 'modules.materiau')
+            'projet' => $projet->load('modules.module', 'modules.materiau'),
         ]);
     }
+
     public function index()
     {
         // Renvoie uniquement les projets du client connecté
         return response()->json(
             Auth::guard('api')->user()->projets()->with('modules')->orderBy('created_at', 'desc')->get()
         );
-    }    
+    }
+
     public function destroy($id)
     {
         $projet = ProjetCuisine::findOrFail($id);
         $projet->modules()->delete();
         $projet->delete();
+
         return response()->json(['message' => 'Projet supprimé avec succès.']);
-    }    
-    
+    }
 }

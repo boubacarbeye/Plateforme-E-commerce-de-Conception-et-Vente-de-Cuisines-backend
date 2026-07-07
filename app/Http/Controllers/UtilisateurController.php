@@ -17,15 +17,16 @@ class UtilisateurController extends Controller
     public function update(Request $request, $id)
     {
         $user = Utilisateur::findOrFail($id);
-        
+
         $data = $request->validate([
             'nom' => 'sometimes|string',
             'prenom' => 'sometimes|string',
-            'email' => 'sometimes|email|unique:utilisateurs,email,' . $id,
+            'email' => 'sometimes|email|unique:utilisateurs,email,'.$id,
             'role' => 'sometimes|in:client,admin,commercial',
         ]);
 
         $user->update($data);
+
         return response()->json($user);
     }
 
@@ -34,6 +35,7 @@ class UtilisateurController extends Controller
     {
         $user = Utilisateur::findOrFail($id);
         $user->delete();
+
         return response()->json(['message' => 'Utilisateur supprimé avec succès.']);
     }
 
@@ -47,8 +49,8 @@ class UtilisateurController extends Controller
             'role' => 'required|in:client,admin,commercial',
         ]);
 
-        $data['password'] = bcrypt($data['password']);
         $user = Utilisateur::create($data);
+
         return response()->json($user, 201);
-    }    
+    }
 }

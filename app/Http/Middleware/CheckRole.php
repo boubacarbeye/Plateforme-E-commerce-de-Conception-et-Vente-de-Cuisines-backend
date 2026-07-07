@@ -26,7 +26,7 @@ class CheckRole
         // 2. Si le token est invalide ou que le rôle de l'utilisateur n'est pas autorisé
         if (! $user || ! in_array($user->role, $roles)) {
             return response()->json([
-                'error' => 'Accès interdit. Permissions insuffisantes.'
+                'error' => 'Accès interdit. Permissions insuffisantes.',
             ], 403); // Code HTTP 403 = Interdit
         }
 
